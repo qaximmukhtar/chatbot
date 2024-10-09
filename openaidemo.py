@@ -1,36 +1,8 @@
-'''from openai import OpenAI
-from dotenv import load_dotenv
 import os
-
-# Load the environment variables from the .env file
-load_dotenv()
-
-# Access the variables
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-client = OpenAI(api_key=OPENAI_API_KEY)
-
-response = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "how to plant a tree"}
-    ]
-)
-
-# Access the content from the response object
-content = response.choices[0].message.content
-
-# Print the content
-print(content)'''
-
-
-
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from dotenv import load_dotenv
-import os
 
 # Load the environment variables from the .env file
 load_dotenv()
@@ -39,22 +11,27 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Initialize the OpenAI object using LangChain
-llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model_name="gpt-4o")
+llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model_name="gpt-4")
 
 # Define the prompt template
-prompt = PromptTemplate(
-    input_variables=["question"],
-    template="You are a helpful assistant. {question}"
-)
+# Modify the single_chain function to include custom memory
+def single_chain(question, memory):
+    prompt_template = """
+    You are a knowledgeable and friendly assistant. This is the conversation so far:
+    {history}
 
-# Create an LLM chain using the prompt and OpenAI object
-chain = LLMChain(llm=llm, prompt=prompt)
+    Please provide a clear and concise answer to the following question:
+    {question}
+    """
 
-# Execute the chain by passing the user question
-response = chain.invoke("who ia christiano ronaldo")
+    # Fill the template with the combined memory and the new question
+    prompt = prompt_template.format(history=memory, question=question)
 
-# Print the response
-print(response)
-print(response["text"])
+    # Create a prompt template object for LangChain to use
+    prompt_obj = PromptTemplate(input_variables=["history", "question"], template=prompt_template)
 
+    # Generate response using LLMChain
+    chain = LLMChain(llm=llm, prompt=prompt_obj)
+    response = chain.run({"history": memory, "question": question})
 
+    return response
